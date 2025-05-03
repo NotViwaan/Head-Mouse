@@ -1,71 +1,58 @@
 import threading
 import tkinter as tk
+import customtkinter as ctk
 import pythoncom
-import eye_mouse_control  # Import your eye-controlled mouse script
-import speech_typing  # Import your speech-controlled typing script
-from PIL import Image, ImageTk  # Pillow for image handling
+import os
+import eye_mouse_control
+import speech_typing
 
-# Function to run the eye control script
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")
+
 def run_eye_control():
     eye_mouse_control.main()
 
-# Function to run the speech typing script
 def run_speech_typing():
-    pythoncom.CoInitialize()  # Initialize COM in the thread
+    pythoncom.CoInitialize()
     speech_typing.main()
 
-# Function to start threads
 def start_threads():
-    # Create threads for each function
-    eye_thread = threading.Thread(target=run_eye_control)
-    speech_thread = threading.Thread(target=run_speech_typing)
+    global eye_thread, speech_thread
+    if not eye_thread.is_alive():
+        eye_thread = threading.Thread(target=run_eye_control, daemon=True)
+        eye_thread.start()
+        eye_status_label.configure(text="Eye Control: Running", text_color="green")
 
-    # Start both threads
-    eye_thread.start()
-    speech_thread.start()
+    if not speech_thread.is_alive():
+        speech_thread = threading.Thread(target=run_speech_typing, daemon=True)
+        speech_thread.start()
+        speech_status_label.configure(text="Speech Control: Running", text_color="green")
 
-# Function to cycle through colors
-def cycle_button_color():
-    global color_index
-    color = colors[color_index]  # Get the current color
-    start_button.config(bg=color)  # Change the button background color
-    color_index = (color_index + 1) % len(colors)  # Update index for next color
-    start_button.after(300, cycle_button_color)  # Schedule next color change
+def stop_processes():
+    os.system("taskkill /IM ease.exe /F")
+    os._exrtationit(0)
 
-# Function to load and display background image
-def load_background_image(root):
-    bg_image = Image.open("logo.png")  # Change to your image file path
-    bg_image = bg_image.resize((300, 150), Image.LANCZOS)  # Resize image to fit
-    bg_photo = ImageTk.PhotoImage(bg_image)
+app = ctk.CTk()
+app.title("Multi-Control Panel")
+app.geometry("400x300")
+app.resizable(False, False)
 
-    bg_label = tk.Label(root, image=bg_photo)
-    bg_label.image = bg_photo  # Keep a reference to avoid garbage collection
-    bg_label.pack(pady=(10, 0))  # Add some padding on top
+title_label = ctk.CTkLabel(app, text="Multi-Control Panel", font=("Arial", 20, "bold"))
+title_label.pack(pady=10)
 
-def create_ui():
-    # Create the main window
-    root = tk.Tk()
-    root.title("Control Panel")
-    root.geometry("300x250")  # Increased height for the image and button
-    root.configure(bg="#333333")  # Dark background
+eye_status_label = ctk.CTkLabel(app, text="Eye Control: Stopped", text_color="red", font=("Arial", 14))
+eye_status_label.pack(pady=5)
 
-    # Load and display background image
-    load_background_image(root)
+speech_status_label = ctk.CTkLabel(app, text="Speech Control: Stopped", text_color="red", font=("Arial", 14))
+speech_status_label.pack(pady=5)
 
-    # Create the start button
-    global start_button
-    start_button = tk.Button(root, text="Start", command=start_threads, bg='#555555', fg='white', font=('Helvetica', 12))
-    start_button.pack(pady=20)
+start_button = ctk.CTkButton(app, text="Start", command=start_threads, fg_color="green", text_color="white")
+start_button.pack(pady=10)
 
-    # Start cycling button colors
-    cycle_button_color()
+stop_button = ctk.CTkButton(app, text="Stop", command=stop_processes, fg_color="red", text_color="white")
+stop_button.pack(pady=10)
 
-    # Start the Tkinter event loop
-    root.mainloop()
+eye_thread = threading.Thread(target=run_eye_control, daemon=True)
+speech_thread = threading.Thread(target=run_speech_typing, daemon=True)
 
-# Color list for cycling
-colors = ['#FF5733', '#FF8D33', '#FFCC33', '#8DFF33', '#33FF57', '#33FF8D', '#33CCFF', '#337BFF', '#3356FF', '#5A33FF', '#A933FF', '#FF33B5']
-color_index = 0  # Initialize color index
-
-if __name__ == "__main__":
-    create_ui()
+app.mainloop()
